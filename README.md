@@ -1,0 +1,2 @@
+# puyo-ai-sample
+ぷよぷよaiのサンプル
