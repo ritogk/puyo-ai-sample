@@ -8,6 +8,7 @@
 #include <conio.h>
 // 時間
 #include <time.h>
+#include <windows.h>
 
 #define FIELD_WIDTH 8
 #define FIELD_HEIGHT 14
@@ -55,15 +56,16 @@ char cellNames[][5] = {
 		"・", // CELL_NONE
 		"■",	// CELL_WALL
 		"◯",	// CELL_PUYO_0
-		"△",	// CELL_PUYO_1
+		"▲",	// CELL_PUYO_1
 		"□",	// CELL_PUYO_2
-		"☆",	// CELL_PUYO_3
+		"★",	// CELL_PUYO_3
 };
 
 // ぷよの位置
 int puyoX = PUYO_START_X;
 int puyoY = PUYO_START_Y;
 int puyoColor;
+int puyoChildColor;
 int puyoAngle;
 bool lock = false;
 
@@ -79,7 +81,7 @@ void display() {
 		int subX = puyoX + puyoSubPotions[puyoAngle][0];
 		int subY = puyoY + puyoSubPotions[puyoAngle][1];
 		displayBuffer[puyoY][puyoX] = CELL_PUYO_0 + puyoColor;;
-		displayBuffer[subY][subX] = CELL_PUYO_0 + puyoColor;
+		displayBuffer[subY][subX] = CELL_PUYO_0 + puyoChildColor;
 	}
 
 	// 描画
@@ -145,7 +147,7 @@ void erasePuyo(int _x, int _y, int _cell) {
 int main(void){
 	srand((unsigned int)time(NULL));
 
-	// フィールドの壁を書き込む
+	// フィールド内に壁を書き込む
 	for (int y = 0; y < FIELD_HEIGHT; y++)
 	{
 		cells[y][0] = CELL_WALL;
@@ -156,13 +158,13 @@ int main(void){
 		cells[FIELD_HEIGHT - 1][x] = CELL_WALL;
 	}
 
-	time_t t = 0;
+	clock_t t = clock();
+	struct timeval _time;
 	while (1)
 	{
-		// time(null) = 現在の時間(秒単位)
-		// １秒立ったら再描画
-		if (t < time(NULL)) {
-			t = time(NULL);
+		// 0.5秒毎に落下させる
+		if (clock() - t >= 500) {
+			t = clock();
 
 			if (!lock) {
 				// 当たり判定
@@ -173,12 +175,13 @@ int main(void){
 					int subX = puyoX + puyoSubPotions[puyoAngle][0];
 					int subY = puyoY + puyoSubPotions[puyoAngle][1];
 					cells[puyoY][puyoX] = CELL_PUYO_0 + puyoColor;
-					cells[subY][subX] = CELL_PUYO_0 + puyoColor;
+					cells[subY][subX] = CELL_PUYO_0 + puyoChildColor;
 					// 設置後の初期化
 					puyoX = PUYO_START_X;
 					puyoY = PUYO_START_Y;
 					puyoAngle = PUYO_ANGLE_0;
 					puyoColor = rand() % PUYO_COLOR_MAX;
+					puyoChildColor = rand() % PUYO_COLOR_MAX;
 
 					// ぷよを落下させるのでロック
 					lock = true;
@@ -245,6 +248,9 @@ int main(void){
 					break;
 				case 'z':
 					angle = (++angle) % PUYO_ANGLE_MAX;
+					break;
+				case 'x':
+					angle = angle == PUYO_ANGLE_0 ? PUYO_ANGLE_270 : angle - 1;
 				}
 				// 当たり判定
 				if (!intersectPuyoToField(x, y, angle)) {
