@@ -27,6 +27,21 @@ enum
 	CELL_MAX
 };
 
+enum {
+	PUYO_ANGLE_0,
+	PUYO_ANGLE_90,
+	PUYO_ANGLE_180,
+	PUYO_ANGLE_270,
+	PUYO_ANGLE_MAX,
+};
+
+int puyoSubPotions[][2] = {
+	{0, -1} , // PUYO_ANGLE_0,
+	{ -1, 0}, // PUYO_ANGLE_90,
+	{0, 1},  // PUYO_ANGLE_180,
+	{1, 0},  // PUYO_ANGLE_270,
+};
+
 // フィールドの状態(0で初期化されている)
 int cells[FIELD_HEIGHT][FIELD_WIDTH];
 int displayBuffer[FIELD_HEIGHT][FIELD_WIDTH];
@@ -41,9 +56,10 @@ char cellNames[][5] = {
 };
 
 // ぷよの位置
-int puyoX = PUYO_START_X,
-puyoY = PUYO_START_Y;
+int puyoX = PUYO_START_X;
+int puyoY = PUYO_START_Y;
 int puyoColor;
+int puyoAngle;
 
 int main(void)
 {
@@ -64,7 +80,12 @@ int main(void)
 		system("cls");
 		// cellsのサイズ分だけバッファーにコピーする
 		memcpy(displayBuffer, cells, sizeof cells);
-		displayBuffer[puyoY][puyoX] = CELL_PUYO_0 + puyoColor;
+
+		int subX = puyoX + puyoSubPotions[puyoAngle][0];
+		int subY = puyoY + puyoSubPotions[puyoAngle][1];
+		displayBuffer[puyoY][puyoX] =
+			displayBuffer[puyoY][subX] = CELL_PUYO_0 + puyoColor;
+
 		// 描画
 		for (int y = 0; y < FIELD_HEIGHT; y++)
 		{

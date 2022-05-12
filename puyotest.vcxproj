@@ -21,8 +21,8 @@
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{4a196e6d-c2f6-4839-b11a-2ea954cd5d27}</ProjectGuid>
-    <RootNamespace>puyoai</RootNamespace>
+    <ProjectGuid>{afa4433c-707b-4666-ad2c-9762e97ddcab}</ProjectGuid>
+    <RootNamespace>puyotest</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -127,7 +127,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="puyoai.cpp" />
+    <ClCompile Include="puyotest.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
