@@ -34,6 +34,6 @@
 # exe ファイルは要らない
 *.exe
 
-# /.vs
-# /x64
-# /Debug
+/.vs
+/x64
+/Debug

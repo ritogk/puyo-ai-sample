@@ -31,7 +31,7 @@ enum
 	CELL_MAX
 };
 
-// ぷよ角度
+// ぷよ角度(左回り)
 enum {
 	PUYO_ANGLE_0,
 	PUYO_ANGLE_90,
@@ -40,6 +40,7 @@ enum {
 	PUYO_ANGLE_MAX,
 };
 
+// 軸ぷよを基準に回転した小ぷよの座標
 int puyoSubPotions[][2] = {
 	{0, -1} , // PUYO_ANGLE_0,
 	{ -1, 0}, // PUYO_ANGLE_90,
@@ -47,36 +48,38 @@ int puyoSubPotions[][2] = {
 	{1, 0},  // PUYO_ANGLE_270,
 };
 
-// フィールドの状態(0で初期化されている)
+// フィールドの状態
 int cells[FIELD_HEIGHT][FIELD_WIDTH];
+// フィールドの状態(描画用)
 int displayBuffer[FIELD_HEIGHT][FIELD_WIDTH];
+// 連結チェックが済んだフィールド
 int checked[FIELD_HEIGHT][FIELD_WIDTH];
 
+// ぷよのアスキーアート
 char cellNames[][5] = {
-		"・", // CELL_NONE
-		"■",	// CELL_WALL
-		"◯",	// CELL_PUYO_0
-		"▲",	// CELL_PUYO_1
-		"□",	// CELL_PUYO_2
-		"★",	// CELL_PUYO_3
+	"・",   // CELL_NONE
+	"■",	// CELL_WALL
+	"◯",	// CELL_PUYO_0
+	"▲",	// CELL_PUYO_1
+	"□",	// CELL_PUYO_2
+	"★",	// CELL_PUYO_3
 };
 
-// ぷよの位置
 int puyoX = PUYO_START_X;
 int puyoY = PUYO_START_Y;
 int puyoColor;
 int puyoChildColor;
 int puyoAngle;
-bool lock = false;
+bool moveLock = false;
 
 // 描画
 void display() {
-	// // コンソールウィンドウをクリア
+	// コンソールをクリア
 	system("cls");
 	// cellsのサイズ分だけバッファーにコピーする
 	memcpy(displayBuffer, cells, sizeof cells);
 	
-	if (!lock) {
+	if (!moveLock) {
 		// 子ぷよを回転させる
 		int subX = puyoX + puyoSubPotions[puyoAngle][0];
 		int subY = puyoY + puyoSubPotions[puyoAngle][1];
@@ -85,10 +88,8 @@ void display() {
 	}
 
 	// 描画
-	for (int y = 1; y < FIELD_HEIGHT; y++)
-	{
-		for (int x = 0; x < FIELD_WIDTH; x++)
-		{
+	for (int y = 1; y < FIELD_HEIGHT; y++){
+		for (int x = 0; x < FIELD_WIDTH; x++){
 			printf("%s", cellNames[displayBuffer[y][x]]);
 		}
 		printf("\n");
@@ -139,8 +140,6 @@ void erasePuyo(int _x, int _y, int _cell) {
 		int y = _y + puyoSubPotions[i][1];
 		erasePuyo(x, y, _cell);
 	}
-
-
 }
 
 // メイン
@@ -159,19 +158,15 @@ int main(void){
 	}
 
 	clock_t t = clock();
-	struct timeval _time;
-	while (1)
-	{
+	while (1){
 		// 0.5秒毎に落下させる
 		if (clock() - t >= 500) {
 			t = clock();
-
-			if (!lock) {
+			if (!moveLock) {
 				// 当たり判定
 				if (!intersectPuyoToField(puyoX, puyoY + 1, puyoAngle)) {
 					puyoY++;
-				}
-				else {
+				} else {
 					int subX = puyoX + puyoSubPotions[puyoAngle][0];
 					int subY = puyoY + puyoSubPotions[puyoAngle][1];
 					cells[puyoY][puyoX] = CELL_PUYO_0 + puyoColor;
@@ -183,25 +178,25 @@ int main(void){
 					puyoColor = rand() % PUYO_COLOR_MAX;
 					puyoChildColor = rand() % PUYO_COLOR_MAX;
 
-					// ぷよを落下させるのでロック
-					lock = true;
+					// ぷよを落下させるのでロックする
+					moveLock = true;
 				}
 			}
 
-			if (lock) {
-				lock = false;
+			if (moveLock) {
+				moveLock = false;
 				// 空中に浮いているぷよを落下させる
 				for (int y = FIELD_HEIGHT - 3; y >= 0; y--) {
 					for (int x = 1; x < FIELD_WIDTH - 1; x++) {
 						if ((cells[y][x] != CELL_NONE) && (cells[y + 1][x] == CELL_NONE)) {
 							cells[y + 1][x] = cells[y][x];
 							cells[y][x] = CELL_NONE;
-							lock = true;
+							moveLock = true;
 						}
 					}
 				}
 
-				if (!lock) {
+				if (!moveLock) {
 					// 連結しているぷよを消す
 					memset(checked, 0, sizeof checked);
 					for (int y = 0; y < FIELD_HEIGHT-1; y++) {
@@ -210,7 +205,7 @@ int main(void){
 								continue;
 							if (getPuyoConnectedCount(x, y, cells[y][x], 0) >= 4) {
 								erasePuyo(x, y, cells[y][x]);
-								lock = true;
+								moveLock = true;
 							}
 						}
 					}
@@ -222,10 +217,7 @@ int main(void){
 		
 		// キーボードの入力があるか
 		if (_kbhit()) {
-			if (lock) {
-				_getch();
-			}
-			else {
+			if (!moveLock) {
 				int x = puyoX;
 				int y = puyoY;
 				int angle = puyoAngle;
