@@ -10,6 +10,13 @@
 #include <time.h>
 #include <windows.h>
 
+#define BOARD_WIDTH 12
+#define BOARD_HEIGHT 13
+#define PUYO_NEXT_START_X 10
+#define PUYO_NEXT_START_Y 1
+#define PUYO_NEXT_NEXT_START_X 10
+#define PUYO_NEXT_NEXT_START_Y 4
+
 #define FIELD_WIDTH 8
 #define FIELD_HEIGHT 14
 
@@ -55,13 +62,16 @@ int displayBuffer[FIELD_HEIGHT][FIELD_WIDTH];
 // 連結チェックが済んだフィールド
 int checked[FIELD_HEIGHT][FIELD_WIDTH];
 
+// ボードの状態
+int boards[BOARD_HEIGHT][BOARD_WIDTH];
+
 // ぷよのアスキーアート
 char cellNames[][5] = {
 	"・",   // CELL_NONE
 	"■",	// CELL_WALL
 	"◯",	// CELL_PUYO_0
 	"▲",	// CELL_PUYO_1
-	"□",	// CELL_PUYO_2
+	"☆",	// CELL_PUYO_2
 	"★",	// CELL_PUYO_3
 };
 
@@ -71,6 +81,11 @@ int puyoColor;
 int puyoChildColor;
 int puyoAngle;
 bool moveLock = false;
+
+int puyoNextColor;
+int puyoNextChildColor;
+int puyoNextNextColor;
+int puyoNextNextChildColor;
 
 // 描画
 void display() {
@@ -87,10 +102,27 @@ void display() {
 		displayBuffer[subY][subX] = CELL_PUYO_0 + puyoChildColor;
 	}
 
-	// 描画
-	for (int y = 1; y < FIELD_HEIGHT; y++){
-		for (int x = 0; x < FIELD_WIDTH; x++){
-			printf("%s", cellNames[displayBuffer[y][x]]);
+	// ボードにフィールドのセル情報を入れ込む
+	for (int y = 0; y < BOARD_HEIGHT; y++){
+		for (int x = 0; x < BOARD_WIDTH; x++){
+			if (y < FIELD_HEIGHT && x < FIELD_WIDTH) {
+				boards[y][x] = displayBuffer[y+1][x];
+			}
+		}
+	}
+	
+	// ネクストぷよ
+	boards[PUYO_NEXT_START_Y - 1][PUYO_NEXT_START_X - 1] = CELL_PUYO_0 + puyoNextChildColor;
+	boards[PUYO_NEXT_START_Y][PUYO_NEXT_START_X - 1] = CELL_PUYO_0 + puyoNextColor;
+
+	// ネクネクぷよ
+	boards[PUYO_NEXT_NEXT_START_Y][PUYO_NEXT_NEXT_START_X - 1] = CELL_PUYO_0 + puyoNextNextChildColor;
+	boards[PUYO_NEXT_NEXT_START_Y + 1][PUYO_NEXT_NEXT_START_X - 1] = CELL_PUYO_0 + puyoNextNextColor;
+
+	// ボードを描画
+	for (int y = 0; y < BOARD_HEIGHT; y++) {
+		for (int x = 0; x < BOARD_WIDTH; x++) {
+			printf("%s", cellNames[boards[y][x]]);
 		}
 		printf("\n");
 	}
@@ -144,18 +176,24 @@ void erasePuyo(int _x, int _y, int _cell) {
 
 // メイン
 int main(void){
-	srand((unsigned int)time(NULL));
-
-	// フィールド内に壁を書き込む
-	for (int y = 0; y < FIELD_HEIGHT; y++)
-	{
+	// フィールﾄﾞに壁を書き込む
+	for (int y = 0; y < FIELD_HEIGHT; y++){
 		cells[y][0] = CELL_WALL;
 		cells[y][FIELD_WIDTH - 1] = CELL_WALL;
 	}
-	for (int x = 0; x < FIELD_WIDTH; x++)
-	{
+	for (int x = 0; x < FIELD_WIDTH; x++){
 		cells[FIELD_HEIGHT - 1][x] = CELL_WALL;
 	}
+	
+	srand((unsigned int)time(NULL));
+
+	// 軸ぷよ、小ぷよ、ネクストぷよ、ネクネクぷよの色を取得
+	puyoColor = rand() % PUYO_COLOR_MAX;
+	puyoChildColor = rand() % PUYO_COLOR_MAX;
+	puyoNextColor = rand() % PUYO_COLOR_MAX;
+	puyoNextChildColor = rand() % PUYO_COLOR_MAX;
+	puyoNextNextColor = rand() % PUYO_COLOR_MAX;
+	puyoNextNextChildColor = rand() % PUYO_COLOR_MAX;
 
 	clock_t t = clock();
 	while (1){
@@ -171,12 +209,17 @@ int main(void){
 					int subY = puyoY + puyoSubPotions[puyoAngle][1];
 					cells[puyoY][puyoX] = CELL_PUYO_0 + puyoColor;
 					cells[subY][subX] = CELL_PUYO_0 + puyoChildColor;
-					// 設置後の初期化
+
 					puyoX = PUYO_START_X;
 					puyoY = PUYO_START_Y;
 					puyoAngle = PUYO_ANGLE_0;
-					puyoColor = rand() % PUYO_COLOR_MAX;
-					puyoChildColor = rand() % PUYO_COLOR_MAX;
+					puyoColor = puyoNextColor;
+					puyoChildColor = puyoNextChildColor;
+					puyoNextColor = puyoNextNextColor;
+					puyoNextChildColor = puyoNextNextChildColor;
+					puyoNextNextColor = rand() % PUYO_COLOR_MAX;
+					puyoNextNextChildColor = rand() % PUYO_COLOR_MAX;
+					
 
 					// ぷよを落下させるのでロックする
 					moveLock = true;
