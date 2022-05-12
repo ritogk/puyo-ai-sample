@@ -287,6 +287,16 @@ int main(void){
 				case 'x':
 					angle = angle == PUYO_ANGLE_0 ? PUYO_ANGLE_270 : angle - 1;
 				}
+
+				// ぷよを右回転させた時に右側にぷよがある場合は軸ぷよを左にずらして回転させる。
+				if (angle == PUYO_ANGLE_270 && cells[y][x + 1] != CELL_NONE) {
+					x--;
+				}
+				// ぷよを左回転させた時に左側にぷよがある場合は軸ぷよを右にずらして回転させる。
+				if (angle == PUYO_ANGLE_90 && cells[y][x - 1] != CELL_NONE) {
+					x++;
+				}
+
 				// 当たり判定
 				if (!intersectPuyoToField(x, y, angle)) {
 					puyoX = x;
