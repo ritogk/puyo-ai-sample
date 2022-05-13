@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.2.32505.173
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "puyotest", "puyotest.vcxproj", "{AFA4433C-707B-4666-AD2C-9762E97DDCAB}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ai", "ai.vcxproj", "{AFA4433C-707B-4666-AD2C-9762E97DDCAB}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
