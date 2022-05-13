@@ -34,6 +34,10 @@
 # exe ファイルは要らない
 *.exe
 
-/.vs
-/x64
-/Debug
+/tokopuyo/.vs
+/tokopuyo/x64
+/tokopuyo/Debug
+
+/ai/.vs
+/ai/x64
+/ai/Debug
