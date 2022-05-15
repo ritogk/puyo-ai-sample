@@ -56,7 +56,20 @@ int puyoSubPotions[][2] = {
 };
 
 // フィールドの状態
-int cells[FIELD_HEIGHT][FIELD_WIDTH];
+int cells[FIELD_HEIGHT][FIELD_WIDTH] = { {1, 0, 0, 0, 0, 0, 0, 1}
+,{1, 0, 4, 0, 0, 0, 0, 1}
+,{1, 0, 0, 2, 3, 2, 0, 1}
+,{1, 0, 0, 2, 4, 5, 0, 1}
+,{1, 0, 0, 2, 4, 5, 0, 1}
+,{1, 0, 0, 5, 5, 3, 0, 1}
+,{1, 0, 4, 5, 2, 3, 0, 1}
+,{1, 0, 4, 4, 2, 3, 0, 1}
+,{1, 0, 5, 5, 2, 5, 4, 1}
+,{1, 2, 2, 5, 3, 5, 4, 1}
+,{1, 4, 2, 3, 3, 5, 2, 1}
+,{1, 3, 5, 5, 5, 3, 2, 1}
+,{1, 4, 4, 4, 3, 3, 2, 1}
+,{1, 1, 1, 1, 1, 1, 1, 1} };
 // フィールドの状態(描画用)
 int displayBuffer[FIELD_HEIGHT][FIELD_WIDTH];
 // 連結チェックが済んだフィールド
@@ -176,14 +189,6 @@ void erasePuyo(int _x, int _y, int _cell) {
 
 // メイン
 int main(void){
-	// フィールﾄﾞに壁を書き込む
-	for (int y = 0; y < FIELD_HEIGHT; y++){
-		cells[y][0] = CELL_WALL;
-		cells[y][FIELD_WIDTH - 1] = CELL_WALL;
-	}
-	for (int x = 0; x < FIELD_WIDTH; x++){
-		cells[FIELD_HEIGHT - 1][x] = CELL_WALL;
-	}
 	
 	srand((unsigned int)time(NULL));
 
