@@ -19,6 +19,9 @@ using std::pow;
 #include <vector>
 using std::vector;
 
+#include <string>   
+using std::string;
+
 
 #define BOARD_WIDTH 12
 #define BOARD_HEIGHT 13
@@ -86,6 +89,16 @@ char cellNames[][5] = {
 	"▲",	// CELL_PUYO_1
 	"☆",	// CELL_PUYO_2
 	"★",	// CELL_PUYO_3
+};
+
+// 連鎖シュミレーター用
+char rensaSyumiNames[][5] = {
+	"a",     // CELL_NONE
+	"",	    // CELL_WALL
+	"b",	// CELL_PUYO_0
+	"c",	// CELL_PUYO_1
+	"e",	// CELL_PUYO_2
+	"d",	// CELL_PUYO_3
 };
 
 int puyoX = PUYO_START_X;
@@ -313,28 +326,32 @@ bool isChain(int _x, int _y, int _cell, int _cells[FIELD_HEIGHT][FIELD_WIDTH]){
 }
 
 // 連鎖数を取得
-int getChain(int _cells[FIELD_HEIGHT][FIELD_WIDTH]) {
+int chain(int _cells[FIELD_HEIGHT][FIELD_WIDTH], int chainCnt) {
 	int __cells[FIELD_HEIGHT][FIELD_WIDTH];
 	for (int i = 0; i < FIELD_HEIGHT; i++) {
 		for (int j = 0; j < FIELD_WIDTH; j++) {
 			__cells[i][j] = _cells[i][j];
 		}
 	}
-
-	int chain = 0;
+	
+	int chainFlg = false;
 	for (int y = 0; y < FIELD_HEIGHT - 1; y++) {
 		for (int x = 1; x < FIELD_WIDTH - 1; x++) {
 			if (__cells[y][x] == CELL_NONE)
 				continue;
 			if (getPuyoConnectedCount(x, y, __cells[y][x], 0, __cells) >= 4) {
 				erasePuyo(x, y, __cells[y][x], __cells);
-				fall(__cells);
-				chain++;
-				memset(checked, 0, sizeof checked);
+				chainFlg = true;
 			}
 		}
 	}
-	return chain;
+	if (!chainFlg) {
+		return chainCnt;
+	}
+	fall(__cells);
+	chainCnt++;
+	memset(checked, 0, sizeof checked);
+	return chain(__cells, chainCnt);
 }
 
 void tumoAllMove() {
@@ -413,17 +430,17 @@ void evaluation() {
 				__cells[0][x] = CELL_PUYO_0 + i;
 				fall(__cells);
 
-				// getChainの計算式がおかしい・・・
+				// chainの計算式がおかしい・・・
 				// 2色同時消し = 2連鎖ってカウントしてる。
 				memset(checked, 0, sizeof checked);
-				int chain = getChain(__cells);
-				if (maxChain < chain) {
-					maxChain = chain;
+				int chainCount = chain(__cells, 0);
+				if (maxChain < chainCount) {
+					maxChain = chainCount;
 					if (maxChain >= 9) {
 						int a = 1;
-						memcpy(cells, __cells, sizeof  __cells);
-						display();
-						printf("chain:%d", nodes[0].chain);
+						//memcpy(cells, __cells, sizeof  __cells);
+						//display();
+						//printf("chain:%d", nodes[0].chain);
 					}
 				}
  			}
@@ -494,17 +511,43 @@ int main(void){
 		puyoNextChildColor = puyoNextNextChildColor;
 		puyoNextNextColor = rand() % PUYO_COLOR_MAX;
 		puyoNextNextChildColor = rand() % PUYO_COLOR_MAX;
-
-		int a = 1;
 	}
-	
-
-
-	
 	
 	// // 画面出力
 	// display();
 	memcpy(cells, nodes[0].cells, sizeof  nodes[0].cells);
 	display();
-	printf("chain:%d", nodes[0].chain);
+	printf("chain:%d\n", nodes[0].chain);
+
+	// 連鎖シュミレーター用URL生成
+	string param = "";
+	int beforCell = cells[0][1];
+	int cellCnt = 0;
+	for (int y = 0; y < FIELD_HEIGHT - 1; y++) {
+		for (int x = 1; x < FIELD_WIDTH - 1; x++) {
+			// param = param + std::to_string(cells[y][x]);
+			if (beforCell != cells[y][x]) {
+				
+				if(cellCnt == 1){
+					param = param + (rensaSyumiNames[beforCell]);
+				}
+				else {
+					param = param + (rensaSyumiNames[beforCell]) + std::to_string(cellCnt);
+				}
+				
+				cellCnt = 1;
+				beforCell = cells[y][x];
+			}
+			else {
+				cellCnt++;
+			}
+		}
+	}
+	if (cellCnt == 1) {
+		param = param + (rensaSyumiNames[beforCell]);
+	}
+	else {
+		param = param + (rensaSyumiNames[beforCell]) + std::to_string(cellCnt);
+	}
+	printf("https://www.pndsng.com/puyo/index.html?%s", param.c_str());
 }
