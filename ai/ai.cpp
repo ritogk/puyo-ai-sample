@@ -1,15 +1,14 @@
 ﻿
 #include <array>
 #include <cmath>
-using std::pow;
 #include <algorithm>
 #include <ctime>
 #include <vector>
-using std::vector;
 #include <string>   
-using std::string;
 
-import calc;
+using std::pow;
+using std::vector;
+using std::string;
 
 #define SCREEN_WIDTH 12
 #define SCREEN_HEIGHT 13
@@ -61,14 +60,10 @@ int puyoSubPotions[][2] = {
 	{0, 1},   // PUYO_ANGLE_180,
 	{1, 0},   // PUYO_ANGLE_270,
 };
-
 // フィールドの状態
 int cells[FIELD_HEIGHT][FIELD_WIDTH];
-// フィールドの状態(描画用)
-int displayBuffer[FIELD_HEIGHT][FIELD_WIDTH];
 // 連結チェックが済んだフィールド
 int checked[FIELD_HEIGHT][FIELD_WIDTH];
-
 // 画面の状態
 int screen[SCREEN_HEIGHT][SCREEN_WIDTH];
 
@@ -168,14 +163,12 @@ vector<Node> nodes;
 void display() {
 	// コンソールをクリア
 	system("cls");
-	// cellsのサイズ分だけバッファーにコピーする
-	memcpy(displayBuffer, cells, sizeof cells);
 
 	// スクリーンにフィールドの情報を入れ込む
 	for (int y = 0; y < SCREEN_HEIGHT; y++){
 		for (int x = 0; x < SCREEN_WIDTH; x++){
 			if (y < FIELD_HEIGHT && x < FIELD_WIDTH) {
-				screen[y][x] = displayBuffer[y+1][x];
+				screen[y][x] = cells[y+1][x];
 			}
 		}
 	}
@@ -295,7 +288,8 @@ int chain(int _cells[FIELD_HEIGHT][FIELD_WIDTH], int chainCnt) {
 	return chain(__cells, chainCnt);
 }
 
-void tumoAllMove() {
+// 移動可能な全てパターンのノードを作成
+void createNodes() {
 	int _cells[FIELD_HEIGHT][FIELD_WIDTH];
 	for (int nCnt = 0; nCnt < highRateNodes.size(); nCnt++) {
 		for (int i = 0; i < sizeof(moves) / sizeof(moves[0]); i++) {
@@ -397,7 +391,7 @@ void evaluation() {
 }
 
 // 並び替え関数
-static bool compareCpusByProperty1(Node& a, Node& b) {
+static bool nodeByRate(Node& a, Node& b) {
 	return a.rate > b.rate;
 }
 
@@ -430,14 +424,13 @@ int main(void){
 	highRateNodes.push_back(node);
 
 	for (int i = 0; i < CHAIN_TUMO; i++){
-		// 指定階層より下のツモを全部置く
-		tumoAllMove();
-
+		// 移動可能な全パターンのノードを生成
+		createNodes();
 		// 評価
 		evaluation();
 
-		// 評価の高い順にノードを抜き出す。
-		sort(nodes.begin(), nodes.end(), compareCpusByProperty1);
+		// 評価の高いノードを抜き出す。
+		sort(nodes.begin(), nodes.end(), nodeByRate);
 		if (nodes.size() > BEAM_WIDTH) {
 			nodes.resize(BEAM_WIDTH);
 		}
@@ -460,15 +453,13 @@ int main(void){
 	display();
 	printf("chain:%d\n", highRateNodes[0].chain);
 
-	// 連鎖シュミレーター用URL生成
+	// 連鎖シュミレーターのURL生成
 	string param = "";
 	int beforCell = cells[0][1];
 	int cellCnt = 0;
 	for (int y = 0; y < FIELD_HEIGHT - 1; y++) {
 		for (int x = 1; x < FIELD_WIDTH - 1; x++) {
-			// param = param + std::to_string(cells[y][x]);
 			if (beforCell != cells[y][x]) {
-
 				if (cellCnt == 1) {
 					param = param + (chainSimulatorNames[beforCell]);
 				}
