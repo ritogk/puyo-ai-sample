@@ -376,12 +376,12 @@ void tumoAllMove() {
 				fall(_cells);
 
 				// 13段目以降にぷよを置いていない事
-				if (_cells[1][1] != CELL_NONE
-					||  _cells[1][2] != CELL_NONE
-					|| _cells[1][3] != CELL_NONE
-					|| _cells[1][4] != CELL_NONE
-					|| _cells[1][5] != CELL_NONE
-					||  _cells[1][6] != CELL_NONE) continue;
+				if (_cells[0][1] != CELL_NONE
+					||  _cells[0][2] != CELL_NONE
+					|| _cells[0][3] != CELL_NONE
+					|| _cells[0][4] != CELL_NONE
+					|| _cells[0][5] != CELL_NONE
+					||  _cells[0][6] != CELL_NONE) continue;
 
 				// 連鎖していない事
 				if (isChain(mainX, mainY, _cells[mainY][mainX], _cells)) {
@@ -487,7 +487,7 @@ int main(void){
 	node.rate = 0;
 	nodes.push_back(node);
 
-	for (int i = 0; i < 25; i++){
+	for (int i = 0; i < 30; i++){
 		// 指定階層より下のツモを全部置く
 		tumoAllMove();
 		// 評価
