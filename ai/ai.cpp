@@ -430,8 +430,6 @@ void evaluation() {
 				__cells[0][x] = CELL_PUYO_0 + i;
 				fall(__cells);
 
-				// chainの計算式がおかしい・・・
-				// 2色同時消し = 2連鎖ってカウントしてる。
 				memset(checked, 0, sizeof checked);
 				int chainCount = chain(__cells, 0);
 				if (maxChain < chainCount) {
@@ -445,8 +443,14 @@ void evaluation() {
 				}
  			}
 		}
+
+		// 後々追加したい評処理
+		// - 同時消しが少ない
+		// - 4個消しが多い
+		// - U字で組んでいるかどうか
+
 		
-		nodesBuffer[nCnt].rate += pow(maxChain, 2) * 10;
+		nodesBuffer[nCnt].rate += pow(maxChain, 3) * 10;
 		nodesBuffer[nCnt].chain = maxChain;
 	}
 }
