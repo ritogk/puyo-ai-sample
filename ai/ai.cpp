@@ -32,6 +32,9 @@ using std::string;
 // ビームサーチのビーム幅
 #define BEAM_WIDTH 50
 
+// 配列の要素数を取得する
+#define SIZE_OF_ARRAY(array) (sizeof(array)/sizeof(array[0]))
+
 // フィールドのオブジェクト
 enum
 {
@@ -221,7 +224,7 @@ void erasePuyo(int _x, int _y, int _cell, int _cells[FIELD_HEIGHT][FIELD_WIDTH])
 }
 
 // ぷよを落下させる
-void fall(int _cells[FIELD_HEIGHT][FIELD_WIDTH]) {
+void fallPuyo(int _cells[FIELD_HEIGHT][FIELD_WIDTH]) {
 	for (int a = 0; a < FIELD_HEIGHT - 1; a++) {
 		for (int y = FIELD_HEIGHT - 3; y >= 0; y--) {
 			for (int x = 1; x < FIELD_WIDTH - 1; x++) {
@@ -234,15 +237,8 @@ void fall(int _cells[FIELD_HEIGHT][FIELD_WIDTH]) {
 	}
 }
 
-// ビームサーチ
-void beamSearch() {
-	// 評価
-	// ソート
-	// 切り捨て
-}
-
 // 連鎖があるかどうか
-bool isChain(int _x, int _y, int _cell, int _cells[FIELD_HEIGHT][FIELD_WIDTH]){
+bool exsistChain(int _x, int _y, int _cell, int _cells[FIELD_HEIGHT][FIELD_WIDTH]){
 	memset(checked, 0, sizeof checked);
 	bool exists = false;
 	for (int y = 0; y < FIELD_HEIGHT - 1; y++) {
@@ -260,7 +256,7 @@ bool isChain(int _x, int _y, int _cell, int _cells[FIELD_HEIGHT][FIELD_WIDTH]){
 }
 
 // 連鎖数を取得
-int chain(int _cells[FIELD_HEIGHT][FIELD_WIDTH], int chainCnt) {
+int getChain(int _cells[FIELD_HEIGHT][FIELD_WIDTH], int chainCnt) {
 	int __cells[FIELD_HEIGHT][FIELD_WIDTH];
 	for (int i = 0; i < FIELD_HEIGHT; i++) {
 		for (int j = 0; j < FIELD_WIDTH; j++) {
@@ -282,24 +278,24 @@ int chain(int _cells[FIELD_HEIGHT][FIELD_WIDTH], int chainCnt) {
 	if (!chainFlg) {
 		return chainCnt;
 	}
-	fall(__cells);
+	fallPuyo(__cells);
 	chainCnt++;
 	memset(checked, 0, sizeof checked);
-	return chain(__cells, chainCnt);
+	return getChain(__cells, chainCnt);
 }
 
 // 移動可能な全てパターンのノードを作成
 void createNodes() {
 	int _cells[FIELD_HEIGHT][FIELD_WIDTH];
 	for (int nCnt = 0; nCnt < highRateNodes.size(); nCnt++) {
-		for (int i = 0; i < sizeof(moves) / sizeof(moves[0]); i++) {
-			for (int j = 0; j < sizeof(moves[0]) / sizeof(moves[0][0]); j++) {
+		for (int i = 0; i < SIZE_OF_ARRAY(moves); i++) {
+			for (int j = 0; j < SIZE_OF_ARRAY(moves[0]); j++) {
 				if (moves[i][j][0] == -9 && moves[i][j][1] == -9)
 					continue;
 				
 				// フィールドの内容をコピー	
 				memcpy(_cells, highRateNodes[nCnt].cells, sizeof highRateNodes[nCnt].cells);
-				// ぷよの座標
+				// 軸ぷよと子ぷよの座標
 				int mainX = i + 1;
 				int mainY = PUYO_START_Y;
 				int subX = mainX + moves[i][j][0];
@@ -308,7 +304,7 @@ void createNodes() {
 				_cells[mainY][mainX] = CELL_PUYO_0 + puyoColor;
 				_cells[subY][subX] = CELL_PUYO_0 + puyoChildColor;
 				// 空中に浮いているぷよを落下させる
-				fall(_cells);
+				fallPuyo(_cells);
 
 				// 13段目以降にぷよを置いていない事
 				if (_cells[0][1] != CELL_NONE
@@ -319,7 +315,7 @@ void createNodes() {
 					||  _cells[0][6] != CELL_NONE) continue;
 
 				// 連鎖していない事
-				if (isChain(mainX, mainY, _cells[mainY][mainX], _cells)) {
+				if (exsistChain(mainX, mainY, _cells[mainY][mainX], _cells)) {
 					continue;
 				}
 
@@ -363,10 +359,10 @@ void evaluation() {
 					}
 				}
 				__cells[0][x] = CELL_PUYO_0 + i;
-				fall(__cells);
+				fallPuyo(__cells);
 
 				memset(checked, 0, sizeof checked);
-				int chainCount = chain(__cells, 0);
+				int chainCount = getChain(__cells, 0);
 				if (maxChain < chainCount) {
 					maxChain = chainCount;
 					if (maxChain >= 9) {
@@ -390,7 +386,7 @@ void evaluation() {
 	}
 }
 
-// 並び替え関数
+// 評価値の並び替え用
 static bool nodeByRate(Node& a, Node& b) {
 	return a.rate > b.rate;
 }
