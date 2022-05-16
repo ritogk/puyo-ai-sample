@@ -1,35 +1,21 @@
-﻿// 標準入出力
-#include <stdio.h>
-// 文字列操作
-#include <string.h>
-// 描画クリア用
-#include <stdlib.h>
-// コンソール入出力
-#include <conio.h>
-// 配列
+﻿
 #include <array>
-
 #include <cmath>
 using std::pow;
-
 #include <algorithm>
-
 #include <ctime>
-
 #include <vector>
 using std::vector;
-
 #include <string>   
 using std::string;
 
-
-#define BOARD_WIDTH 12
-#define BOARD_HEIGHT 13
+#define SCREEN_WIDTH 12
+#define SCREEN_HEIGHT 13
 #define PUYO_NEXT_START_X 10
 #define PUYO_NEXT_START_Y 1
 #define PUYO_NEXT_NEXT_START_X 10
 #define PUYO_NEXT_NEXT_START_Y 4
-
+// 
 #define FIELD_WIDTH 8
 #define FIELD_HEIGHT 14
 
@@ -38,8 +24,6 @@ using std::string;
 #define PUYO_START_Y 1
 
 #define PUYO_COLOR_MAX 4
-
-#define SIZE_OF_ARRAY(array) (sizeof(array)/sizeof(array[0]))
 
 
 // フィールドのオブジェクト
@@ -67,8 +51,8 @@ enum {
 int puyoSubPotions[][2] = {
 	{0, -1} , // PUYO_ANGLE_0,
 	{ -1, 0}, // PUYO_ANGLE_90,
-	{0, 1},  // PUYO_ANGLE_180,
-	{1, 0},  // PUYO_ANGLE_270,
+	{0, 1},   // PUYO_ANGLE_180,
+	{1, 0},   // PUYO_ANGLE_270,
 };
 
 // フィールドの状態
@@ -78,8 +62,8 @@ int displayBuffer[FIELD_HEIGHT][FIELD_WIDTH];
 // 連結チェックが済んだフィールド
 int checked[FIELD_HEIGHT][FIELD_WIDTH];
 
-// ボードの状態
-int boards[BOARD_HEIGHT][BOARD_WIDTH];
+// 画面の状態
+int screen[SCREEN_HEIGHT][SCREEN_WIDTH];
 
 // ぷよのアスキーアート
 char cellNames[][5] = {
@@ -101,21 +85,21 @@ char rensaSyumiNames[][5] = {
 	"d",	// CELL_PUYO_3
 };
 
+// 軸ぷよのX座標
 int puyoX = PUYO_START_X;
+// 軸ぷよのY座標
 int puyoY = PUYO_START_Y;
+// 子ぷよの角度
+int puyoAngle;
+// ぷよの色
 int puyoColor;
 int puyoChildColor;
-int puyoAngle;
-bool moveLock = false;
-
 int puyoNextColor;
 int puyoNextChildColor;
 int puyoNextNextColor;
 int puyoNextNextChildColor;
 
-
 #define NODE_MAX 50
-#define MOVE_MAX 22
 // 1列目~6列目で置ける全てのパターン
 int moves[6][4][2] = {
 	// 1列目
@@ -168,12 +152,8 @@ struct Node
 	int cells[FIELD_HEIGHT][FIELD_WIDTH];
 	int chain;
 };
-//Node nodes[NODE_MAX];
 vector<Node> nodes;
-int nodeCnt = 0;
 vector<Node> nodesBuffer;
-//Node nodesBuffer[NODE_MAX * MOVE_MAX];
-int nodesBufferCnt = 0;
 
 // 描画
 void display() {
@@ -183,43 +163,29 @@ void display() {
 	memcpy(displayBuffer, cells, sizeof cells);
 
 	// ボードにフィールドのセル情報を入れ込む
-	for (int y = 0; y < BOARD_HEIGHT; y++){
-		for (int x = 0; x < BOARD_WIDTH; x++){
+	for (int y = 0; y < SCREEN_HEIGHT; y++){
+		for (int x = 0; x < SCREEN_WIDTH; x++){
 			if (y < FIELD_HEIGHT && x < FIELD_WIDTH) {
-				boards[y][x] = displayBuffer[y+1][x];
+				screen[y][x] = displayBuffer[y+1][x];
 			}
 		}
 	}
 	
 	// ネクストぷよ
-	boards[PUYO_NEXT_START_Y - 1][PUYO_NEXT_START_X - 1] = CELL_PUYO_0 + puyoNextChildColor;
-	boards[PUYO_NEXT_START_Y][PUYO_NEXT_START_X - 1] = CELL_PUYO_0 + puyoNextColor;
+	screen[PUYO_NEXT_START_Y - 1][PUYO_NEXT_START_X - 1] = CELL_PUYO_0 + puyoNextChildColor;
+	screen[PUYO_NEXT_START_Y][PUYO_NEXT_START_X - 1] = CELL_PUYO_0 + puyoNextColor;
 
 	// ネクネクぷよ
-	boards[PUYO_NEXT_NEXT_START_Y][PUYO_NEXT_NEXT_START_X - 1] = CELL_PUYO_0 + puyoNextNextChildColor;
-	boards[PUYO_NEXT_NEXT_START_Y + 1][PUYO_NEXT_NEXT_START_X - 1] = CELL_PUYO_0 + puyoNextNextColor;
+	screen[PUYO_NEXT_NEXT_START_Y][PUYO_NEXT_NEXT_START_X - 1] = CELL_PUYO_0 + puyoNextNextChildColor;
+	screen[PUYO_NEXT_NEXT_START_Y + 1][PUYO_NEXT_NEXT_START_X - 1] = CELL_PUYO_0 + puyoNextNextColor;
 
 	// ボードを描画
-	for (int y = 0; y < BOARD_HEIGHT; y++) {
-		for (int x = 0; x < BOARD_WIDTH; x++) {
-			printf("%s", cellNames[boards[y][x]]);
+	for (int y = 0; y < SCREEN_HEIGHT; y++) {
+		for (int x = 0; x < SCREEN_WIDTH; x++) {
+			printf("%s", cellNames[screen[y][x]]);
 		}
 		printf("\n");
 	}
-}
-
-// ぷよ移動後の当たり判定
-bool intersectPuyoToField(int _puyoX, int _puyoY, int _puyoAngle) {
-	// 軸ぷよの当たり判定
-	if (cells[_puyoY][_puyoX] != CELL_NONE)
-		return true;
-	// 子ぷよの当たり判定
-	int subX = _puyoX + puyoSubPotions[_puyoAngle][0];
-	int subY = _puyoY + puyoSubPotions[_puyoAngle][1];
-	if (cells[subY][subX] != CELL_NONE)
-		return true;
-
-	return false;
 }
 
 // ぷよの連結数を取得
@@ -265,41 +231,6 @@ void fall(int _cells[FIELD_HEIGHT][FIELD_WIDTH]) {
 			}
 		}
 	}
-}
-
-// ぷよをフィールドの置ける場所に全通り置く
-void movePuyo(int puyo, int puyoChild) {
-	int _cells[FIELD_HEIGHT][FIELD_WIDTH];
-
-	// 落下処理の前に置けるかどうかの判別を行う。①14段目には置けない。②連鎖しない
-
-	for (int i = 0; i < sizeof(moves) / sizeof(moves[0]); i++) {
-		for (int j = 0; j < sizeof(moves[0]) / sizeof(moves[0][0]); j++) {
-			if (moves[i][j][0] == -9 && moves[i][j][1] == -9)
-				continue;
-			// フィールドの内容をコピー
-			memcpy(_cells, cells, sizeof cells);
-			// ぷよの座標
-			int mainX = i + 1;
-			int mainY = PUYO_START_Y;
-			int subX = mainX + moves[i][j][0];
-			int subY = mainY + moves[i][j][1];
-			_cells[mainY][mainX] = CELL_PUYO_0 + puyoColor;
-			_cells[subY][subX] = CELL_PUYO_0 + puyoChildColor;
-			// 空中に浮いているぷよを落下させる
-			fall(_cells);
-			Node node;
-			node.firstInput = 1;
-			node.rate = 0;
-			node.chain = 0;
-			memcpy(node.cells, _cells, sizeof _cells);
-			nodes[nodeCnt] = node;
-			nodeCnt++;
-		}
-	}
-	
-	// ビームサーチ
-	int a = 1;
 }
 
 // ビームサーチ
@@ -455,6 +386,7 @@ void evaluation() {
 	}
 }
 
+// 並び替え関数
 static bool compareCpusByProperty1(Node& a, Node& b) {
 	return a.rate > b.rate;
 }
@@ -499,8 +431,8 @@ int main(void){
 		// ソート
 		sort(nodesBuffer.begin(), nodesBuffer.end(), compareCpusByProperty1);
 		// 切り捨て(50)
-		if (nodesBuffer.size() > 50) {
-			nodesBuffer.resize(50);
+		if (nodesBuffer.size() > NODE_MAX) {
+			nodesBuffer.resize(NODE_MAX);
 		}
 		// nodesにnodesBuffterを入れ込む
 		nodes.resize(nodesBuffer.size());
@@ -554,4 +486,6 @@ int main(void){
 		param = param + (rensaSyumiNames[beforCell]) + std::to_string(cellCnt);
 	}
 	printf("https://www.pndsng.com/puyo/index.html?%s", param.c_str());
+
+	getchar();
 }
