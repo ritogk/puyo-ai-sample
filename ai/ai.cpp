@@ -9,6 +9,8 @@ using std::vector;
 #include <string>   
 using std::string;
 
+import calc;
+
 #define SCREEN_WIDTH 12
 #define SCREEN_HEIGHT 13
 #define PUYO_NEXT_START_X 10
@@ -25,6 +27,11 @@ using std::string;
 
 #define PUYO_COLOR_MAX 4
 
+// 連鎖を組む際のツモ数
+#define CHAIN_TUMO 30
+
+// ビームサーチのビーム幅
+#define BEAM_WIDTH 50
 
 // フィールドのオブジェクト
 enum
@@ -76,7 +83,7 @@ char cellNames[][5] = {
 };
 
 // 連鎖シュミレーター用
-char rensaSyumiNames[][5] = {
+char chainSimulatorNames[][5] = {
 	"a",     // CELL_NONE
 	"",	    // CELL_WALL
 	"b",	// CELL_PUYO_0
@@ -99,7 +106,6 @@ int puyoNextChildColor;
 int puyoNextNextColor;
 int puyoNextNextChildColor;
 
-#define NODE_MAX 50
 // 1列目~6列目で置ける全てのパターン
 int moves[6][4][2] = {
 	// 1列目
@@ -145,6 +151,7 @@ int moves[6][4][2] = {
 		{-9, -9}
 	}
 };
+
 struct Node
 {
 	int firstInput;
@@ -152,8 +159,10 @@ struct Node
 	int cells[FIELD_HEIGHT][FIELD_WIDTH];
 	int chain;
 };
+// 評価の高いノード
+vector<Node> highRateNodes;
+// ビームサーチの作業用ノード
 vector<Node> nodes;
-vector<Node> nodesBuffer;
 
 // 描画
 void display() {
@@ -162,7 +171,7 @@ void display() {
 	// cellsのサイズ分だけバッファーにコピーする
 	memcpy(displayBuffer, cells, sizeof cells);
 
-	// ボードにフィールドのセル情報を入れ込む
+	// スクリーンにフィールドの情報を入れ込む
 	for (int y = 0; y < SCREEN_HEIGHT; y++){
 		for (int x = 0; x < SCREEN_WIDTH; x++){
 			if (y < FIELD_HEIGHT && x < FIELD_WIDTH) {
@@ -174,7 +183,6 @@ void display() {
 	// ネクストぷよ
 	screen[PUYO_NEXT_START_Y - 1][PUYO_NEXT_START_X - 1] = CELL_PUYO_0 + puyoNextChildColor;
 	screen[PUYO_NEXT_START_Y][PUYO_NEXT_START_X - 1] = CELL_PUYO_0 + puyoNextColor;
-
 	// ネクネクぷよ
 	screen[PUYO_NEXT_NEXT_START_Y][PUYO_NEXT_NEXT_START_X - 1] = CELL_PUYO_0 + puyoNextNextChildColor;
 	screen[PUYO_NEXT_NEXT_START_Y + 1][PUYO_NEXT_NEXT_START_X - 1] = CELL_PUYO_0 + puyoNextNextColor;
@@ -245,7 +253,9 @@ bool isChain(int _x, int _y, int _cell, int _cells[FIELD_HEIGHT][FIELD_WIDTH]){
 	memset(checked, 0, sizeof checked);
 	bool exists = false;
 	for (int y = 0; y < FIELD_HEIGHT - 1; y++) {
+		if (exists) break;
 		for (int x = 1; x < FIELD_WIDTH - 1; x++) {
+			if (exists) break;
 			if (_cells[y][x] == CELL_NONE)
 				continue;
 			if (getPuyoConnectedCount(x, y, _cells[y][x], 0, _cells) >= 4) {
@@ -287,14 +297,14 @@ int chain(int _cells[FIELD_HEIGHT][FIELD_WIDTH], int chainCnt) {
 
 void tumoAllMove() {
 	int _cells[FIELD_HEIGHT][FIELD_WIDTH];
-	for (int nCnt = 0; nCnt < nodes.size(); nCnt++) {
+	for (int nCnt = 0; nCnt < highRateNodes.size(); nCnt++) {
 		for (int i = 0; i < sizeof(moves) / sizeof(moves[0]); i++) {
 			for (int j = 0; j < sizeof(moves[0]) / sizeof(moves[0][0]); j++) {
 				if (moves[i][j][0] == -9 && moves[i][j][1] == -9)
 					continue;
 				
 				// フィールドの内容をコピー	
-				memcpy(_cells, nodes[nCnt].cells, sizeof nodes[nCnt].cells);
+				memcpy(_cells, highRateNodes[nCnt].cells, sizeof highRateNodes[nCnt].cells);
 				// ぷよの座標
 				int mainX = i + 1;
 				int mainY = PUYO_START_Y;
@@ -324,7 +334,7 @@ void tumoAllMove() {
 				n.rate = 0;
 				n.chain = 0;
 				memcpy(n.cells, _cells, sizeof _cells);
-				nodesBuffer.push_back(n);
+				nodes.push_back(n);
 
 			}
 		}
@@ -334,20 +344,20 @@ void tumoAllMove() {
 // 評価
 void evaluation() {
 	// 連結が多い
-	for (int nCnt = 0; nCnt < nodesBuffer.size(); nCnt++) {
+	for (int nCnt = 0; nCnt < nodes.size(); nCnt++) {
 		int connectedRate = 0;
 		memset(checked, 0, sizeof checked);
 		for (int y = 0; y < FIELD_HEIGHT - 1; y++) {
 			for (int x = 1; x < FIELD_WIDTH - 1; x++) {
-				if (nodesBuffer[nCnt].cells[y][x] == CELL_NONE)
+				if (nodes[nCnt].cells[y][x] == CELL_NONE)
 					continue;
-				connectedRate += pow(getPuyoConnectedCount(x, y, nodesBuffer[nCnt].cells[y][x], 0, nodesBuffer[nCnt].cells), 2);
+				connectedRate += pow(getPuyoConnectedCount(x, y, nodes[nCnt].cells[y][x], 0, nodes[nCnt].cells), 2);
 			}
 		}
-		nodesBuffer[nCnt].rate += connectedRate;
+		nodes[nCnt].rate += connectedRate;
 	}
 	// 連鎖が多い
-	for (int nCnt = 0; nCnt < nodesBuffer.size(); nCnt++) {
+	for (int nCnt = 0; nCnt < nodes.size(); nCnt++) {
 		int maxChain = 0;
 		int connectedRate = 0;
 		for (int x = 1; x < FIELD_WIDTH - 1; x++) {
@@ -355,7 +365,7 @@ void evaluation() {
 			for (int i = 0; i < PUYO_COLOR_MAX - 1; i++) {
 				for (int i = 0; i < FIELD_HEIGHT; i++) {
 					for (int j = 0; j < FIELD_WIDTH; j++) {
-						__cells[i][j] = nodesBuffer[nCnt].cells[i][j];
+						__cells[i][j] = nodes[nCnt].cells[i][j];
 					}
 				}
 				__cells[0][x] = CELL_PUYO_0 + i;
@@ -381,8 +391,8 @@ void evaluation() {
 		// - U字で組んでいるかどうか
 
 		
-		nodesBuffer[nCnt].rate += pow(maxChain, 3) * 10;
-		nodesBuffer[nCnt].chain = maxChain;
+		nodes[nCnt].rate += pow(maxChain, 3) * 10;
+		nodes[nCnt].chain = maxChain;
 	}
 }
 
@@ -393,7 +403,7 @@ static bool compareCpusByProperty1(Node& a, Node& b) {
 
 // メイン
 int main(void){
-	// フィールﾄﾞに壁を書き込む
+	// フィールドに壁を書き込む
 	for (int y = 0; y < FIELD_HEIGHT; y++){
 		cells[y][0] = CELL_WALL;
 		cells[y][FIELD_WIDTH - 1] = CELL_WALL;
@@ -402,11 +412,7 @@ int main(void){
 		cells[FIELD_HEIGHT - 1][x] = CELL_WALL;
 	}
 
-	//std::vector<int> va = {1,2};
-	vector<int> numbers = { 10, 20, 50, 100 };
-	numbers.resize(1);
-
-
+	// 擬似乱数の発生系列を変更する
 	srand((unsigned int)time(NULL));
 
 	// 軸ぷよ、小ぷよ、ネクストぷよ、ネクネクぷよの色を取得
@@ -421,25 +427,25 @@ int main(void){
 	memcpy(node.cells, cells, sizeof cells);
 	node.firstInput = 1;
 	node.rate = 0;
-	nodes.push_back(node);
+	highRateNodes.push_back(node);
 
-	for (int i = 0; i < 30; i++){
+	for (int i = 0; i < CHAIN_TUMO; i++){
 		// 指定階層より下のツモを全部置く
 		tumoAllMove();
+
 		// 評価
 		evaluation();
-		// ソート
-		sort(nodesBuffer.begin(), nodesBuffer.end(), compareCpusByProperty1);
-		// 切り捨て(50)
-		if (nodesBuffer.size() > NODE_MAX) {
-			nodesBuffer.resize(NODE_MAX);
+
+		// 評価の高い順にノードを抜き出す。
+		sort(nodes.begin(), nodes.end(), compareCpusByProperty1);
+		if (nodes.size() > BEAM_WIDTH) {
+			nodes.resize(BEAM_WIDTH);
 		}
-		// nodesにnodesBuffterを入れ込む
-		nodes.resize(nodesBuffer.size());
-		for (size_t i = 0; i < nodesBuffer.size(); i++) {
-			nodes[i] = nodesBuffer[i];
+		highRateNodes.resize(nodes.size());
+		for (size_t i = 0; i < nodes.size(); i++) {
+			highRateNodes[i] = nodes[i];
 		}
-		nodesBuffer.resize(0);
+		nodes.resize(0);
 
 		puyoColor = puyoNextColor;
 		puyoChildColor = puyoNextChildColor;
@@ -450,10 +456,9 @@ int main(void){
 	}
 	
 	// // 画面出力
-	// display();
-	memcpy(cells, nodes[0].cells, sizeof  nodes[0].cells);
+	memcpy(cells, highRateNodes[0].cells, sizeof  highRateNodes[0].cells);
 	display();
-	printf("chain:%d\n", nodes[0].chain);
+	printf("chain:%d\n", highRateNodes[0].chain);
 
 	// 連鎖シュミレーター用URL生成
 	string param = "";
@@ -463,14 +468,14 @@ int main(void){
 		for (int x = 1; x < FIELD_WIDTH - 1; x++) {
 			// param = param + std::to_string(cells[y][x]);
 			if (beforCell != cells[y][x]) {
-				
-				if(cellCnt == 1){
-					param = param + (rensaSyumiNames[beforCell]);
+
+				if (cellCnt == 1) {
+					param = param + (chainSimulatorNames[beforCell]);
 				}
 				else {
-					param = param + (rensaSyumiNames[beforCell]) + std::to_string(cellCnt);
+					param = param + (chainSimulatorNames[beforCell]) + std::to_string(cellCnt);
 				}
-				
+
 				cellCnt = 1;
 				beforCell = cells[y][x];
 			}
@@ -480,10 +485,10 @@ int main(void){
 		}
 	}
 	if (cellCnt == 1) {
-		param = param + (rensaSyumiNames[beforCell]);
+		param = param + (chainSimulatorNames[beforCell]);
 	}
 	else {
-		param = param + (rensaSyumiNames[beforCell]) + std::to_string(cellCnt);
+		param = param + (chainSimulatorNames[beforCell]) + std::to_string(cellCnt);
 	}
 	printf("https://www.pndsng.com/puyo/index.html?%s", param.c_str());
 
