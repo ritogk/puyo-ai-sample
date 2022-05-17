@@ -132,6 +132,9 @@
     <ClCompile Include="ai.cpp" />
     <ClCompile Include="calc.ixx" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="ai.h" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
