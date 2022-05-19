@@ -203,7 +203,7 @@ bool exsistChain(int _x, int _y, int _cell, int _cells[FIELD_HEIGHT][FIELD_WIDTH
 }
 
 // 連鎖数を取得
-int getChain(int _cells[FIELD_HEIGHT][FIELD_WIDTH], int chainCnt) {
+ChainResult getChain(int _cells[FIELD_HEIGHT][FIELD_WIDTH], int chainCnt, int multiCnt) {
 	int __cells[FIELD_HEIGHT][FIELD_WIDTH];
 	for (int i = 0; i < FIELD_HEIGHT; i++) {
 		for (int j = 0; j < FIELD_WIDTH; j++) {
@@ -219,20 +219,22 @@ int getChain(int _cells[FIELD_HEIGHT][FIELD_WIDTH], int chainCnt) {
 			if (getPuyoConnectedCount(x, y, __cells[y][x], 0, __cells) >= 4) {
 				erasePuyo(x, y, __cells[y][x], __cells);
 				chainFlg = true;
+				multiCnt++;
 			}
 		}
 	}
 	if (!chainFlg) {
-		return chainCnt;
+		ChainResult result = { chainCnt, multiCnt };
+		return result;
 	}
 	fallPuyo(__cells);
 	chainCnt++;
 	memset(checked, 0, sizeof checked);
-	return getChain(__cells, chainCnt);
+	return getChain(__cells, chainCnt, multiCnt);
 }
 
 // 移動可能な全てパターンのノードを作成
-void createNodes() {
+void createNodes(int tumoCount) {
 	int _cells[FIELD_HEIGHT][FIELD_WIDTH];
 	for (int nCnt = 0; nCnt < highRateNodes.size(); nCnt++) {
 		for (int i = 0; i < SIZE_OF_ARRAY(moves); i++) {
@@ -270,6 +272,7 @@ void createNodes() {
 				n.firstInput = 1;
 				n.rate = 0;
 				n.chain = 0;
+				n.tumo = tumoCount;
 				memcpy(n.cells, _cells, sizeof _cells);
 				nodes.push_back(n);
 
@@ -288,7 +291,9 @@ void evaluation() {
 			for (int x = 1; x < FIELD_WIDTH - 1; x++) {
 				if (nodes[nCnt].cells[y][x] == CELL_NONE)
 					continue;
+				int connectedCount = getPuyoConnectedCount(x, y, nodes[nCnt].cells[y][x], 0, nodes[nCnt].cells);
 				connectedRate += pow(getPuyoConnectedCount(x, y, nodes[nCnt].cells[y][x], 0, nodes[nCnt].cells), 2);
+				
 			}
 		}
 		nodes[nCnt].rate += connectedRate;
@@ -309,11 +314,13 @@ void evaluation() {
 				fallPuyo(__cells);
 
 				memset(checked, 0, sizeof checked);
-				int chainCount = getChain(__cells, 0);
-				if (maxChain < chainCount) {
-					maxChain = chainCount;
+				ChainResult result = getChain(__cells, 0, 0);
+				if (maxChain < result.chain) {
+					maxChain = result.chain;
 					if (maxChain >= 9) {
-						//memcpy(cells, __cells, sizeof  __cells);
+
+						int a = 0;
+						// memcpy(cells, __cells, sizeof  __cells);
 						//display();
 						//printf("chain:%d", nodes[0].chain);
 					}
@@ -322,14 +329,31 @@ void evaluation() {
 		}
 
 		// 後々追加したい評処理
-		// - 同時消しが少ない
-		// - 4個消しが多い
+		// - 同時消しが少ない(不要？
+		// - 4個消しが多い(不要?
 		// - U字で組んでいるかどうか
-
-		
 		nodes[nCnt].rate += pow(maxChain, 3) * 10;
 		nodes[nCnt].chain = maxChain;
 	}
+
+	//// 1,5列目が高い
+	//for (int nCnt = 0; nCnt < nodes.size(); nCnt++) {
+	//	int count1 = 0;
+	//	int count2 = 0;
+	//	int count5 = 0;
+	//	int count6 = 0;
+	//	int count3 = 0;
+	//	int count4 = 0;
+	//	memset(checked, 0, sizeof checked);
+	//	for (int y = 0; y < FIELD_HEIGHT - 1; y++) {
+	//		count1 += nodes[nCnt].cells[y][1] != CELL_NONE ? 1 : 0;
+	//		count6 += nodes[nCnt].cells[y][6] != CELL_NONE ? 1 : 0;
+	//		count2 += nodes[nCnt].cells[y][2] != CELL_NONE ? 0.5 : 0;
+	//		count5 += nodes[nCnt].cells[y][5] != CELL_NONE ? 0.5 : 0;
+	//	}
+	//	int count = (count1 + count6 + count2 + count5 + count3 + count4);
+	//	nodes[nCnt].rate += ((nodes[nCnt].tumo * CHAIN_TUMO)/ nodes[nCnt].tumo) * count / 30;
+	//}
 }
 
 // 評価値の並び替え用
@@ -337,8 +361,15 @@ static bool nodeByRate(Node& a, Node& b) {
 	return a.rate > b.rate;
 }
 
+
+#include <Windows.h>
 // メイン
 int main(void){
+	HWND hwnd = nullptr;
+
+	// get handles to a device context (DC)
+	HDC hwindowDC = GetDC(hwnd);
+
 	// フィールドに壁を書き込む
 	for (int y = 0; y < FIELD_HEIGHT; y++){
 		cells[y][0] = CELL_WALL;
@@ -363,11 +394,12 @@ int main(void){
 	memcpy(node.cells, cells, sizeof cells);
 	node.firstInput = 1;
 	node.rate = 0;
+	node.tumo = 0;
 	highRateNodes.push_back(node);
 
 	for (int i = 0; i < CHAIN_TUMO; i++){
 		// 移動可能な全パターンのノードを生成
-		createNodes();
+		createNodes(i + 1);
 		// 評価
 		evaluation();
 
@@ -427,3 +459,4 @@ int main(void){
 
 	getchar();
 }
+	

@@ -52,5 +52,11 @@ struct Node
 	int rate;
 	int cells[FIELD_HEIGHT][FIELD_WIDTH];
 	int chain;
+	int tumo;
 };
 
+struct ChainResult
+{
+	int chain;
+	int multi;
+};
