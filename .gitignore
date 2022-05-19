@@ -41,3 +41,8 @@
 /ai/.vs
 /ai/x64
 /ai/Debug
+
+/capture/.vs
+/capture/x64
+/capture/Debug
+/capture/packages
